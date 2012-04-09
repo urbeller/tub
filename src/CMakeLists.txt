@@ -1,0 +1,15 @@
+
+#ADD_LIBRARY( vpc SHARED vpc_base.cxx htrki.cxx vpc_bundle.cxx sampling.cxx direct.cxx autocalib.cxx)
+
+SET( SOURCES test )
+
+FOREACH( src ${SOURCES} )
+	ADD_EXECUTABLE(${src} ${src}.cxx)
+	TARGET_LINK_LIBRARIES(${src}  ${LibUSB_LIBRARIES})
+ENDFOREACH(src)
+
+#FILE(GLOB HDRS "${CMAKE_SOURCE_DIR}/include/*.h")
+#INSTALL(FILES ${HDRS} DESTINATION include/tub)
+#INSTALL(TARGETS tub 
+#	LIBRARY DESTINATION lib
+#	ARCHIVE  DESTINATION lib)
