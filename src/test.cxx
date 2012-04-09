@@ -68,7 +68,6 @@ void printdev(libusb_device *dev , int filter_dev_class , int vid) {
 	cout<<"Device Sub-Class: "<<hex<<int(desc.bDeviceSubClass)<<endl;
 	cout<<"Nb of Configurations: "<<(int)desc.bNumConfigurations<<endl;
 
-
 	libusb_config_descriptor *config;
 	libusb_get_config_descriptor(dev, 0, &config);
 	cout<<"Nb of Interfaces : "<<dec<<(int)config->bNumInterfaces<<endl;
@@ -101,15 +100,27 @@ void printdev(libusb_device *dev , int filter_dev_class , int vid) {
 				err = libusb_get_string_descriptor_ascii( handle , uint8_t(interdesc->iInterface) , buff , sizeof(buff) );
 			}else buff[0]='\0';
 
+			int iclass = int(interdesc->bInterfaceClass);
+			int isubclass = int(interdesc->bInterfaceSubClass);
+			
 			cout<<"\tAlt Interface "<<j<<buff<<" --> "
-				<<"Class/SubClass:"<<hex<<uint(interdesc->bInterfaceClass)<<"/"<<uint(interdesc->bInterfaceSubClass)<<" | "
-				<<"Protocol: "<<dec<<uint(interdesc->bInterfaceClass)<<" | "
+				<<"Class/SubClass:"<<hex<<iclass<<"/"<<isubclass<<" | "<<dec
 				<<"Nb of Endpoints: "<<uint(interdesc->bNumEndpoints)<<endl;
 
 			if( interdesc->extra_length ){
 				ptr = interdesc->extra;
-				cout<<"\t Extra:"<<uint(ptr[0])<<" bytes , "<<hex<<uint(ptr[1])
-					<<" , "<<uint(ptr[2])<<dec<<endl;
+				cout<<"\t Extra:"<<uint(ptr[0])<<" bytes , "<<hex<<uint(ptr[1]);
+
+				if( isubclass == 1){
+					//This is a video control interface
+					cout<<" , "<<dec<<int( ptr[5] | (ptr[6] << 8) )<<dec;
+					cout<<" (Control Interface)"<<endl;
+				}else if(isubclass == 2 ){
+					//This is a video streaming interface
+					cout<<" , "<<dec<<int( ptr[4] | (ptr[5] << 8) )<<dec;
+					cout<<" (Streaming Interface)"<<endl;
+				
+				}
 
 			}
 
@@ -125,8 +136,8 @@ void printdev(libusb_device *dev , int filter_dev_class , int vid) {
 				unsigned char ep_attr = char(epdesc->bmAttributes);
 				cout<<"Attrib: "<< (ep_attr&3) <<" | ";
 
-				cout<<"Packet Sz: "<<  (uint) epdesc->wMaxPacketSize<<endl;
-
+				cout<<"Packet Sz: "<<  (uint) epdesc->wMaxPacketSize<<" | ";
+				cout<<epdesc->extra_length<<endl;
 			}
 
 			cout<<endl;
