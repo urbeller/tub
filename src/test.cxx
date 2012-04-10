@@ -107,17 +107,55 @@ void printdev(libusb_device *dev , int filter_dev_class , int vid) {
 				<<"Class/SubClass:"<<hex<<iclass<<"/"<<isubclass<<" | "<<dec
 				<<"Nb of Endpoints: "<<uint(interdesc->bNumEndpoints)<<endl;
 
-			if( interdesc->extra_length ){
+			if( iclass==0xe && interdesc->extra_length ){
 				ptr = interdesc->extra;
-				cout<<"\t Extra:"<<uint(ptr[0])<<" bytes , "<<hex<<uint(ptr[1]);
+				cout<<"\t Extra:"<<int(ptr[0])<<" bytes , "<<hex<<uint(ptr[1]);
 
 				if( isubclass == 1){
-					//This is a video control interface
-					cout<<" , "<<dec<<int( ptr[5] | (ptr[6] << 8) )<<dec;
-					cout<<" (Control Interface)"<<endl;
-				}else if(isubclass == 2 ){
+                                    //This is a video control interface
+                                    uint extra_len = int( ptr[5] | (ptr[6] << 8) );
+                                    cout<<" , "<<dec<<extra_len<<" bytes, (Control Interface)"<<" | "<<endl;
+                                    if( int(ptr[2]) == 0x01 ){
+                                        //VC Interface hdr desc.
+                                        uint nb_vs_iface = ptr[11];
+                                        cout<<"\t\t Header : "<<nb_vs_iface<<" VideoStreaming ifaces"<<endl;
+
+                                        //Now look for Terminal/Unit descriptors.
+                                        int ndx = 12 + nb_vs_iface;
+                                        while( ndx < extra_len ){
+                                            int cur_len = ptr[ndx];
+
+                                            switch( ptr[ndx+2] ){
+                                                case 0x01:  /* HEADER */
+                                                    //Already tackled....should be merged !
+                                                    break;
+                                                case 0x02:  /* INPUT_TERMINAL */
+                                                    cout<<"\t\t\t INPUT TERMINAL: ";
+
+                                                    break;
+                                                case 0x03:  /* OUTPUT_TERMINAL */
+                                                    cout<<"\t\t\t OUTPUT TERMINAL: ";
+                                                    break;
+                                                case 0x04:  /* SELECTOR_UNIT */
+                                                    cout<<"\t\t\t SELECTOR UNIT: ";
+                                                    break;
+                                                case 0x05:  /* PROCESSING_UNIT */
+                                                    cout<<"\t\t\t PROCESSING UNIT: ";
+                                                    break;
+                                                case 0x06:  /* EXTENSION_UNIT */
+                                                    cout<<"\t\t\t EXTENSION UNIT: ";
+                                                    break;
+
+                                            }
+                                            
+                                            cout<<endl;
+                                            ndx += cur_len;
+                                        }
+                                    }
+
+                                }else if(isubclass == 2 ){
 					//This is a video streaming interface
-					cout<<" , "<<dec<<int( ptr[4] | (ptr[5] << 8) )<<dec;
+					cout<<" , "<<dec<<int( ptr[4] | (ptr[5] << 8) )<<" bytes"<<dec;
 					cout<<" (Streaming Interface)"<<endl;
 				
 				}
