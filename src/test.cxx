@@ -1,10 +1,97 @@
 #include <iostream>
 #include <libusb.h>
+#include "tub.h"
 
 using namespace std;
 
-void printdev(libusb_device *dev , int filter_dev_class = -1 , int vid=0x46d); //prototype of the function
+void printdev(libusb_device *dev , int filter_dev_class  , int vid); //prototype of the function
 
+void parse_vcontrol( struct libusb_device_handle *handle  , unsigned char *ptr ){
+
+    unsigned int term_type;
+    unsigned int nb_controls;
+    int ctrl;
+
+    switch( ptr[2] ){
+
+        case TUB::VC_HEADER :
+             cout<<" HEADER |"<<endl;
+        break;
+
+        case TUB::VC_INPUT_TERMINAL:
+             cout<<" INPUT_TERMINAL ";
+             term_type = ptr[4] | ( ptr[5]<<8);
+
+             if( term_type == TUB::ITT_CAMERA ){
+                nbytes_controls=ptr[14];
+                cout<<"(CAMERA) | Controls ("<<nbytes_controls<<" bytes) : ";
+                ctrl=0;
+                for(int b=0;b<nbytes_controls;b++)
+                    for(int f=0;f<8;f++){
+
+                        ctrl++;
+                    }
+
+             }else
+                cout<<"Input-Terminal type not handled.";
+
+             cout<<endl;
+        break;
+
+        case TUB::VC_OUTPUT_TERMINAL :
+             cout<<" OUTPUT_TERMINAL ";
+             term_type = ptr[4] | ( ptr[5]<<8);
+
+            switch( term_type ){
+                case TUB::OTT_VENDOR_SPECIFIC :
+                    cout<<"(VENDOR_SPECIFIC) | ";
+                break;
+
+                case TUB::OTT_DISPLAY :
+                    cout<<"(DISPLAY) | ";
+                break;
+
+                case TUB::OTT_MEDIA_TRANSPORT :
+                    cout<<"(MEDIA_TRANSPORT) | ";
+                break;
+
+                case TUB::TT_STREAMING :
+                    cout<<"(STREAMING) | ";
+                break;
+
+                default:
+                    cout<<hex<<term_type<<dec;
+                break;
+            }
+    
+             cout<<endl;
+        break;
+
+        case TUB::VC_SELECTOR_UNIT :
+             cout<<" SELECTOR_UNIT |"<<endl;
+        break;
+
+        case TUB::VC_PROCESSING_UNIT :
+             nb_controls = ptr[7];
+             cout<<" PROCESSING_UNIT ";
+
+             cout<<endl;
+        break;
+        
+        case TUB::VC_EXTENSION_UNIT :
+             cout<<" EXTENSION_UNIT |"<<endl;
+        break;
+
+        default:
+            cout<<"Unknown or not handled video control sub-type: "<<int(ptr[2])<<endl;;
+            break;
+    }
+
+}
+
+void parse_vstreaming( struct libusb_device_handle *handle  , unsigned char *ptr ){
+
+}
 int main() {
 	libusb_device **devs; //pointer to pointer of device, used to retrieve a list of devices
 	libusb_context *ctx = NULL; //a libusb session
@@ -23,7 +110,7 @@ int main() {
 	cout<<endl<<endl<<cnt<<" Devices in list.\n\n"<<endl; //print total number of usb devices
 	ssize_t i; //for iterating through the list
 	for(i = 0; i < cnt; i++) {
-		printdev(devs[i] , 0xEF); //print specs of this device
+		printdev(devs[i] , 0xEF, 0x046d); //print specs of this device
 	}
 	libusb_free_device_list(devs, 1); //free the list, unref the devices in it
 	libusb_exit(ctx); //close the session
@@ -95,72 +182,73 @@ void printdev(libusb_device *dev , int filter_dev_class , int vid) {
 		for(int j=0; j<inter->num_altsetting; j++) {
 			interdesc = &inter->altsetting[j];
 
-			//Try to retrieve the interface description string.
-			if( interdesc->iInterface > 0 && have_access){
-				err = libusb_get_string_descriptor_ascii( handle , uint8_t(interdesc->iInterface) , buff , sizeof(buff) );
-			}else buff[0]='\0';
 
 			int iclass = int(interdesc->bInterfaceClass);
 			int isubclass = int(interdesc->bInterfaceSubClass);
-			
+
 			cout<<"\tAlt Interface "<<j<<buff<<" --> "
 				<<"Class/SubClass:"<<hex<<iclass<<"/"<<isubclass<<" | "<<dec
 				<<"Nb of Endpoints: "<<uint(interdesc->bNumEndpoints)<<endl;
 
-			if( iclass==0xe && interdesc->extra_length ){
-				ptr = interdesc->extra;
-				cout<<"\t Extra:"<<int(ptr[0])<<" bytes , "<<hex<<uint(ptr[1]);
 
-				if( isubclass == 1){
-                                    //This is a video control interface
-                                    uint extra_len = int( ptr[5] | (ptr[6] << 8) );
-                                    cout<<" , "<<dec<<extra_len<<" bytes, (Control Interface)"<<" | "<<endl;
-                                    if( int(ptr[2]) == 0x01 ){
-                                        //VC Interface hdr desc.
-                                        uint nb_vs_iface = ptr[11];
-                                        cout<<"\t\t Header : "<<nb_vs_iface<<" VideoStreaming ifaces"<<endl;
+                        if( interdesc->extra_length ){
+                            unsigned char *ptr=const_cast<unsigned char*>(interdesc->extra);
+                            unsigned int size = interdesc->extra_length;
+            
+                            while( size > 4 ){
+                                unsigned int desc_sz = ptr[0];
 
-                                        //Now look for Terminal/Unit descriptors.
-                                        int ndx = 12 + nb_vs_iface;
-                                        while( ndx < extra_len ){
-                                            int cur_len = ptr[ndx];
+                                switch( ptr[1] ){
+                                    case TUB::CS_INTERFACE:
+                                        cout<<"\t\tClass Specific Interface:\n";
+                                        switch( interdesc->bInterfaceClass ){
+                                            case TUB::CC_AUDIO :
+                                                cout<<"\t\t\t Audio Class:"<<endl;
+                                                break;
 
-                                            switch( ptr[ndx+2] ){
-                                                case 0x01:  /* HEADER */
-                                                    //Already tackled....should be merged !
-                                                    break;
-                                                case 0x02:  /* INPUT_TERMINAL */
-                                                    cout<<"\t\t\t INPUT TERMINAL: ";
+                                            case TUB::CC_VIDEO:
+                                                cout<<"\t\t\t Video Class ";
+                                                switch (interdesc->bInterfaceSubClass){
+                                                    case TUB::SC_VIDEOCONTROL :
+                                                        cout<<"(CONTROL): ";
+                                                        parse_vcontrol( handle , ptr );
+                                                        break;
+                                                    case TUB::SC_VIDEOSTREAMING :
+                                                        cout<<"(STREAMING): ";
+                                                        parse_vstreaming( handle , ptr );
+                                                        break;
 
-                                                    break;
-                                                case 0x03:  /* OUTPUT_TERMINAL */
-                                                    cout<<"\t\t\t OUTPUT TERMINAL: ";
-                                                    break;
-                                                case 0x04:  /* SELECTOR_UNIT */
-                                                    cout<<"\t\t\t SELECTOR UNIT: ";
-                                                    break;
-                                                case 0x05:  /* PROCESSING_UNIT */
-                                                    cout<<"\t\t\t PROCESSING UNIT: ";
-                                                    break;
-                                                case 0x06:  /* EXTENSION_UNIT */
-                                                    cout<<"\t\t\t EXTENSION UNIT: ";
+                                                    case TUB::SC_VIDEO_INTERFACE_COLLECTION :
+                                                        cout<<"(INTERFACE_COLLECTION): "<<endl;
+                                                        break;
+                                                    
+                                                    default:
+                                                        cout<<"(Unknown Sub-Class).";
                                                     break;
 
-                                            }
-                                            
-                                            cout<<endl;
-                                            ndx += cur_len;
+                                                }
+                                                cout<<endl;
+                                                break;
+
+                                            default:
+                                                cout<<"\t\t\tClass unknown or not handled.\n";
+                                            break;
                                         }
-                                    }
 
-                                }else if(isubclass == 2 ){
-					//This is a video streaming interface
-					cout<<" , "<<dec<<int( ptr[4] | (ptr[5] << 8) )<<" bytes"<<dec;
-					cout<<" (Streaming Interface)"<<endl;
-				
-				}
+                                    break;
 
-			}
+                                    default:
+                                        cout<<"Extra-Descriptor unknown or not handled.\n";
+                                    break;
+                                }
+
+                                size -= desc_sz;
+                                ptr  += desc_sz;
+                            }
+
+
+                        }
+
 
 			uint nb_ep = uint(interdesc->bNumEndpoints);
 
