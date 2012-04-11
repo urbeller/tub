@@ -9,7 +9,7 @@ void printdev(libusb_device *dev , int filter_dev_class  , int vid); //prototype
 void parse_vcontrol( struct libusb_device_handle *handle  , unsigned char *ptr ){
 
     unsigned int term_type;
-    unsigned int nb_controls;
+    unsigned int nbytes_controls;
     int ctrl;
 
     switch( ptr[2] ){
@@ -72,7 +72,7 @@ void parse_vcontrol( struct libusb_device_handle *handle  , unsigned char *ptr )
         break;
 
         case TUB::VC_PROCESSING_UNIT :
-             nb_controls = ptr[7];
+             nbytes_controls = ptr[7];
              cout<<" PROCESSING_UNIT ";
 
              cout<<endl;
