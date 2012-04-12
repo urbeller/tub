@@ -24,10 +24,12 @@ void parse_vcontrol( struct libusb_device_handle *handle  , unsigned char *ptr )
 
              if( term_type == TUB::ITT_CAMERA ){
                 nbytes_controls=ptr[14];
-                cout<<"(CAMERA) | Controls ("<<nbytes_controls<<" bytes) : ";
+                cout<<"(CAMERA) | Controls ("<<nbytes_controls<<" bytes) : \n";
                 ctrl=0;
                 for(int b=0;b<nbytes_controls;b++)
                     for(int f=0;f<8;f++){
+						if( (1<<f) & ptr[15+b])
+							cout<<"\t\t\t\t\t"<<TUB::controls_list[ctrl].name<<endl;
 
                         ctrl++;
                     }
