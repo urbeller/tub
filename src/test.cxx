@@ -1,4 +1,6 @@
 #include <iostream>
+#include <cstring>
+#include <cstdio>
 #include <libusb.h>
 #include "tub.h"
 
@@ -6,38 +8,59 @@ using namespace std;
 
 void printdev(libusb_device *dev , int filter_dev_class  , int vid); //prototype of the function
 
+static const char *get_guid(unsigned char *ptr)
+{
+	static char guid[39];
+
+	sprintf(guid, "{%02x%02x%02x%02x"
+			"-%02x%02x"
+			"-%02x%02x"
+			"-%02x%02x"
+			"-%02x%02x%02x%02x%02x%02x}",
+	       ptr[0], ptr[1], ptr[2], ptr[3],
+	       ptr[4], ptr[5],
+	       ptr[6], ptr[7],
+	       ptr[8], ptr[9],
+	       ptr[10], ptr[11], ptr[12], ptr[13], ptr[14], ptr[15]);
+	return guid;
+}
 void parse_vcontrol( struct libusb_device_handle *handle  , unsigned char *ptr ){
 
     unsigned int term_type;
     unsigned int nbytes_controls;
     int ctrl;
 
+    if( ptr[1] != TUB::CS_INTERFACE ){
+        cout<<"Warning: Invalid descriptor.\n";
+        return;
+    }
+
     switch( ptr[2] ){
 
         case TUB::VC_HEADER :
-             cout<<" HEADER |"<<endl;
-        break;
+            cout<<" HEADER |"<<endl;
+            break;
 
         case TUB::VC_INPUT_TERMINAL:
-             cout<<" INPUT_TERMINAL ";
-             term_type = ptr[4] | ( ptr[5]<<8);
+            cout<<" INPUT_TERMINAL ";
+            term_type = ptr[4] | ( ptr[5]<<8);
 
-             if( term_type == TUB::ITT_CAMERA ){
+            if( term_type == TUB::ITT_CAMERA ){
                 nbytes_controls=ptr[14];
                 cout<<"(CAMERA) | Controls ("<<nbytes_controls<<" bytes) : \n";
                 ctrl=0;
                 for(int b=0;b<nbytes_controls;b++)
                     for(int f=0;f<8;f++){
-						if( (1<<f) & ptr[15+b])
-							cout<<"\t\t\t\t\t"<<TUB::controls_list[ctrl].name<<endl;
+                        if( (1<<f) & ptr[15+b])
+                            cout<<"\t\t\t\t\t"<<TUB::ct_controls_list[ctrl].name<<endl;
 
                         ctrl++;
                     }
 
-             }else
+            }else
                 cout<<"Input-Terminal type not handled.";
 
-             cout<<endl;
+            cout<<endl;
         break;
 
         case TUB::VC_OUTPUT_TERMINAL :
@@ -74,14 +97,25 @@ void parse_vcontrol( struct libusb_device_handle *handle  , unsigned char *ptr )
         break;
 
         case TUB::VC_PROCESSING_UNIT :
-             nbytes_controls = ptr[7];
-             cout<<" PROCESSING_UNIT ";
+        nbytes_controls = ptr[7];
+        cout<<" PROCESSING_UNIT | Controls ("<<nbytes_controls<<" bytes):"<<endl;
 
-             cout<<endl;
+        ctrl=0;
+        for(int b=0;b<nbytes_controls;b++)
+            for(int f=0;f<8;f++){
+                if( (1<<f) & ptr[8+b])
+                    cout<<"\t\t\t\t\t"<<TUB::pu_controls_list[ctrl].name<<endl;
+
+                ctrl++;
+            }
+
+        cout<<endl;
         break;
         
         case TUB::VC_EXTENSION_UNIT :
-             cout<<" EXTENSION_UNIT |"<<endl;
+             cout<<" EXTENSION_UNIT | GUID "<<get_guid( &ptr[4] );
+
+             cout<<endl;
         break;
 
         default:
@@ -92,6 +126,39 @@ void parse_vcontrol( struct libusb_device_handle *handle  , unsigned char *ptr )
 }
 
 void parse_vstreaming( struct libusb_device_handle *handle  , unsigned char *ptr ){
+
+    unsigned int nb_formats;
+    unsigned int nbytes_controls;
+    int ctrl;
+
+   if( ptr[1] != TUB::CS_INTERFACE ){
+        cout<<"Warning: Invalid descriptor.\n";
+        return;
+    }
+
+
+    switch( ptr[2] ){
+        case TUB::VS_INPUT_HEADER :
+             nb_formats = ptr[3];
+             nbytes_controls = ptr[12];
+             cout<<"INPUT HEADER: "<<nb_formats<<" formats | Controls "<<nbytes_controls<< " byte(s) : ";
+
+             for(int p=0;p<nb_formats;p++)
+                cout<<int(ptr[13+p*nbytes_controls])<<",";
+
+             cout<<endl;
+        break;
+
+        case TUB::VS_OUTPUT_HEADER :
+             cout<<"OUTPUT HEADER. \n";
+        break;
+
+        default:
+            cout<<"Sub-type not handled: "<<int(ptr[2])<<endl;
+        break;
+
+    }
+
 
 }
 int main() {
@@ -188,7 +255,7 @@ void printdev(libusb_device *dev , int filter_dev_class , int vid) {
 			int iclass = int(interdesc->bInterfaceClass);
 			int isubclass = int(interdesc->bInterfaceSubClass);
 
-			cout<<"\tAlt Interface "<<j<<buff<<" --> "
+			cout<<"\tAlt Interface "<<j<<" --> "
 				<<"Class/SubClass:"<<hex<<iclass<<"/"<<isubclass<<" | "<<dec
 				<<"Nb of Endpoints: "<<uint(interdesc->bNumEndpoints)<<endl;
 
@@ -223,7 +290,7 @@ void printdev(libusb_device *dev , int filter_dev_class , int vid) {
                                                     case TUB::SC_VIDEO_INTERFACE_COLLECTION :
                                                         cout<<"(INTERFACE_COLLECTION): "<<endl;
                                                         break;
-                                                    
+
                                                     default:
                                                         cout<<"(Unknown Sub-Class).";
                                                     break;
@@ -257,7 +324,7 @@ void printdev(libusb_device *dev , int filter_dev_class , int vid) {
 			for(int k=0; k<nb_ep; k++) {
 				epdesc = &interdesc->endpoint[k];
 				cout<<"\t\t\tEndpoint "<<k<<" | ";
-				
+
 				uint8_t ep_adr = char(epdesc->bEndpointAddress);
 				cout<<"EP Address: "<<(ep_adr&15) <<","<< ( (ep_adr>>4) & 7) << "," <<  ( (ep_adr>>7) & 1)<< " | ";
 
