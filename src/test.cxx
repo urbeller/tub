@@ -127,8 +127,11 @@ void parse_vcontrol( struct libusb_device_handle *handle  , unsigned char *ptr )
 
 void parse_vstreaming( struct libusb_device_handle *handle  , unsigned char *ptr ){
 
-    unsigned int nb_formats;
+    unsigned int nb_formats , nb_compression;
     unsigned int nbytes_controls;
+	unsigned int width , height,compression;
+	unsigned char flags;
+	bool still_support;
     int ctrl;
 
    if( ptr[1] != TUB::CS_INTERFACE ){
@@ -152,6 +155,57 @@ void parse_vstreaming( struct libusb_device_handle *handle  , unsigned char *ptr
         case TUB::VS_OUTPUT_HEADER :
              cout<<"OUTPUT HEADER. \n";
         break;
+
+		case TUB::VS_STILL_IMAGE_FRAME :
+			nb_formats = ptr[4];
+			nb_compression = ptr[6+4*nb_formats];
+			cout<<"STILL IMAGE, "<<nb_formats<<" Formats (W,H): ";
+
+			for(int i=0; i<nb_formats; i++){
+			       width =  ptr[5+4*i] | (ptr[6+4*i] << 8);
+			       height=  ptr[7+4*i] | (ptr[8+4*i] << 8);
+				cout<<width<<"x"<<height<<",";
+			}
+
+			cout<<" | Compression: "<<endl;
+
+			for(int i=0; i<nb_compression; i++){
+				compression = ptr[6+4*nb_formats+i];
+				cout<<compression<<" , ";
+			}
+
+			cout<<endl;
+		break;
+
+		case TUB::VS_FORMAT_UNCOMPRESSED :
+			cout<<"FORMAT UNCOMPRESSED, ";
+
+			cout<<endl;
+		break;
+		
+		case TUB::VS_FRAME_UNCOMPRESSED :
+		case TUB::VS_FRAME_MJPEG:
+			cout<<"FRAME UNCOMPRESSED/MJPEG | ";
+			flags = ptr[4];
+			still_support = ((flags & 1)!=0);
+			cout<<"Support still image ("<<boolalpha<<still_support<<") | SIZE (";
+			width = ptr[5] | (ptr[6] <<  8);
+			height = ptr[7] | (ptr[8] << 8);
+			cout<<width<<"x"<<height<<")";
+			cout<<endl;
+		break;
+
+		case TUB::VS_FORMAT_MJPEG :
+			cout<<"FORMAT MJPEG | ";
+
+			cout<<endl;
+		break;
+
+		case TUB::VS_COLOR_FORMAT :
+			cout<<"COLOR FORMAT | ";
+
+			cout<<endl;
+		break;
 
         default:
             cout<<"Sub-type not handled: "<<int(ptr[2])<<endl;
@@ -230,6 +284,7 @@ void printdev(libusb_device *dev , int filter_dev_class , int vid) {
 	const libusb_interface *inter;
 	const libusb_interface_descriptor *interdesc;
 	const libusb_endpoint_descriptor *epdesc;
+
 	for(int iface=0; iface<(int)config->bNumInterfaces; iface++) {
 		bool have_access = true;
 		bool did_detach = false;
@@ -255,7 +310,7 @@ void printdev(libusb_device *dev , int filter_dev_class , int vid) {
 			int iclass = int(interdesc->bInterfaceClass);
 			int isubclass = int(interdesc->bInterfaceSubClass);
 
-			cout<<"\tAlt Interface "<<j<<" --> "
+			cout<<"\tAlt Setting "<<j<<" --> "
 				<<"Class/SubClass:"<<hex<<iclass<<"/"<<isubclass<<" | "<<dec
 				<<"Nb of Endpoints: "<<uint(interdesc->bNumEndpoints)<<endl;
 
@@ -342,7 +397,8 @@ void printdev(libusb_device *dev , int filter_dev_class , int vid) {
 
 		 if(did_detach)
 			 libusb_attach_kernel_driver(handle, iface);
-	}
+	}// for(int iface=0...
+
 	cout<<endl;
 	libusb_free_config_descriptor(config);
 	libusb_close( handle );
