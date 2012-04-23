@@ -24,6 +24,21 @@ static const char *get_guid(unsigned char *ptr)
 	       ptr[10], ptr[11], ptr[12], ptr[13], ptr[14], ptr[15]);
 	return guid;
 }
+
+void parse_endpoint( struct libusb_device_handle *handle , const libusb_interface_descriptor *iface , const libusb_endpoint_descriptor *ep){
+
+	static const char *ep_type[] = { "Control", "Isochronous", "Bulk", "Interrupt" };
+	static const char *ep_sync[] = { "None", "Asynchronous", "Adaptive", "Synchronous" };
+
+        cout<< "TYPE: "<<ep_type[ep->bmAttributes & 3]<<" | SYNC: " << ep_sync[(ep->bmAttributes >> 2) & 3]<<endl;
+	if (ep->extra_length){
+            const unsigned char *ptr = ep->extra;
+            cout<<"\t\t\t\t CLASS "<<ptr[1]<<endl;
+        }else cout<<"\t\t\t\t No extra CLASS.\n";
+
+        cout<<endl;
+}
+
 void parse_vcontrol( struct libusb_device_handle *handle  , unsigned char *ptr ){
 
     unsigned int term_type;
@@ -374,21 +389,13 @@ void printdev(libusb_device *dev , int filter_dev_class , int vid) {
                         }
 
 
-			uint nb_ep = uint(interdesc->bNumEndpoints);
+                        uint nb_ep = uint(interdesc->bNumEndpoints);
 
-			for(int k=0; k<nb_ep; k++) {
-				epdesc = &interdesc->endpoint[k];
-				cout<<"\t\t\tEndpoint "<<k<<" | ";
-
-				uint8_t ep_adr = char(epdesc->bEndpointAddress);
-				cout<<"EP Address: "<<(ep_adr&15) <<","<< ( (ep_adr>>4) & 7) << "," <<  ( (ep_adr>>7) & 1)<< " | ";
-
-				unsigned char ep_attr = char(epdesc->bmAttributes);
-				cout<<"Attrib: "<< (ep_attr&3) <<" | ";
-
-				cout<<"Packet Sz: "<<  (uint) epdesc->wMaxPacketSize<<" | ";
-				cout<<epdesc->extra_length<<endl;
-			}
+                        for(int k=0; k<nb_ep; k++){
+                            cout<<"\t\tEP "<<k<<" : ";
+                            epdesc = &interdesc->endpoint[k];
+                            parse_endpoint( handle , interdesc , epdesc );
+                        }
 
 			cout<<endl;
 		}
@@ -397,6 +404,7 @@ void printdev(libusb_device *dev , int filter_dev_class , int vid) {
 
 		 if(did_detach)
 			 libusb_attach_kernel_driver(handle, iface);
+
 	}// for(int iface=0...
 
 	cout<<endl;
