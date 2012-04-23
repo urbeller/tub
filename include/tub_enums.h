@@ -4,11 +4,14 @@
 
 namespace TUB{
 
+//Status
+enum status_type {DEV_ERROR = -2 , INIT_ERROR = -1 , SUCCESS = 1 };
+
 //Class Specific.
 enum cs_type {CS_INTERFACE=0x24 };
 
 //Class Codes.
-enum cc_type {CC_VIDEO=0x0e , CC_AUDIO=0x01 };
+enum cc_type {CC_NONE=0x00 , CC_VIDEO=0x0e , CC_AUDIO=0x01 };
 
 //Sub-Classes codes.
 enum sc_type {SC_UNKNOWN=0x00 , SC_VIDEOCONTROL=0x01,SC_VIDEOSTREAMING=0x02,SC_VIDEO_INTERFACE_COLLECTION=0x03,
