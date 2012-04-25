@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <libusb.h>
+#include <stdlib.h>
 #include "tub_enums.h"
 #include "tub_controls.h"
 
