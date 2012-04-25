@@ -15,7 +15,7 @@ namespace TUB{
 			return INIT_ERROR;
 
 		
-		
+		return SUCCESS;
 	}
 
 }

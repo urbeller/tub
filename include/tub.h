@@ -32,9 +32,8 @@ namespace TUB{
 			//ctor
 			Context( ) : ctx(NULL) {}
 			~Context(){
-				if( ctx ){
+				if( ctx != NULL ){
 					libusb_exit(ctx);
-					free( ctx );
 				}
 			}
 	};
