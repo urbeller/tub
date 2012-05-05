@@ -28,7 +28,7 @@ namespace TUB{
 			vector<Device> list;//Not the best structure if devices must be removed!
 
 
-			int refresh( int class_type=CC_NONE);
+			int refresh( );
 	
 			//ctor
 			Context( ) : ctx(NULL) {}
@@ -41,9 +41,11 @@ namespace TUB{
 
 	class Device{
 		private:
-			libusb_device *dev;
-
+			libusb_device *lusb_dev;
+			libusb_device_descriptor desc;
+			string	sn;//Serial number
 		public:
+			Device( libusb_device *_d );
 
 	};
 
@@ -58,15 +60,15 @@ namespace TUB{
 
 	class PropTalk{
 		private:
-			Device			dev;//The device
+			Device			*dev;//The device
 			int				iface;//The interface
 
 		public:
 			PropTalk( ){}
-			PropTalk( Device _d ) : dev(_d) {}
-			PropTalk( Device _d , int _iface) : dev(_d) , iface(_iface) {}
+			PropTalk( Device *_d ) : dev(_d) {}
+			PropTalk( Device *_d , int _iface) : dev(_d) , iface(_iface) {}
 			
-			int setDev( Device _d){ dev = _d;}
+			int setDev( Device *_d){ dev = _d;}
 			int setIface( int _iface){ iface = _iface;}
 
 			int send( int prop , int val );
