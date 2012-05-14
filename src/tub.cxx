@@ -2,7 +2,8 @@
 #include <cstring>
 #include <cstdio>
 #include <libusb.h>
-#include <string.h>
+#include <string>
+#include <sstream>
 #include "tub.h"
 
 using namespace std;
@@ -47,7 +48,7 @@ namespace TUB{
 
 
 
-	Device::Device( libusb_device *_d ) : lusb_dev(_d){
+	Device::Device( libusb_device *_d ) : lusb_dev(_d) , vendor_name("") , product_name(""){
 		int err;
 		unsigned char buff [512];
 		struct libusb_device_handle *handle = NULL; 
@@ -61,7 +62,30 @@ namespace TUB{
 		if( err > 0 )
 			sn =  reinterpret_cast<const char*>(buff) ;
 
-		cout<<"Adding....Vendor/Product/SN: "<<hex<<desc.idVendor <<"/"<<desc.idProduct<<dec<<"/"<<sn<<endl;
+		//Look-up the vendor/product name.
+		USBId usbid("../ressources/usb.ids");
+		string st[2];
+		usbid.look_up( desc.idVendor , desc.idProduct , st );
+
+		//If not found stringify vid/pid.
+		if( st[0] != "" ){
+			vendor_name = st[0];
+		}else{
+			std::ostringstream oss;
+			oss<<hex<<desc.idVendor;
+			vendor_name = oss.str();
+		}
+
+		if( st[1] != "" ){
+			product_name = st[1];
+		}else{
+			ostringstream oss;
+			oss<<hex<<desc.idProduct;
+			product_name = oss.str();
+		}
+
+
+		cout<<"Adding....: "<<vendor_name<<" -- "<<product_name<<"::"<<sn<<endl;
 
 		libusb_close( handle );
 	}	

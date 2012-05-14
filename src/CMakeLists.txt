@@ -1,5 +1,5 @@
 
-ADD_LIBRARY( tub SHARED tub.cxx)
+ADD_LIBRARY( tub SHARED tub.cxx USBId.cxx)
 TARGET_LINK_LIBRARIES(tub ${LibUSB_LIBRARIES})
 
 SET( SOURCES test )
