@@ -333,7 +333,7 @@ void printdev(libusb_device *dev , int filter_dev_class , int vid) {
                         if( interdesc->extra_length ){
                             unsigned char *ptr=const_cast<unsigned char*>(interdesc->extra);
                             unsigned int size = interdesc->extra_length;
-            
+
                             while( size > 4 ){
                                 unsigned int desc_sz = ptr[0];
 

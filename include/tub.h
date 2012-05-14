@@ -14,7 +14,7 @@ namespace TUB{
 
 	class Device;
 	class Context;
-	class Iface;
+	class Interface;
 	class Endpoint;
 	class PropTalk;
 
@@ -29,7 +29,7 @@ namespace TUB{
 
 
 			int refresh( );
-	
+
 			//ctor
 			Context( ) : ctx(NULL) {}
 			~Context(){
@@ -43,6 +43,7 @@ namespace TUB{
 		private:
 			libusb_device *lusb_dev;
 			libusb_device_descriptor desc;
+                        vector< Interface > iface_list;
 			string vendor_name;
 			string product_name;
 			string	sn;//Serial number
@@ -51,8 +52,14 @@ namespace TUB{
 
 	};
 
-	class Iface{
+	class Interface{
+            private:
+                int iface_id;
 
+            public:
+                Interface(libusb_device_handle *handle ,
+                          libusb_config_descriptor *config ,
+                          int _iface);
 
 	};
 
@@ -69,7 +76,7 @@ namespace TUB{
 			PropTalk( ){}
 			PropTalk( Device *_d ) : dev(_d) {}
 			PropTalk( Device *_d , int _iface) : dev(_d) , iface(_iface) {}
-			
+
 			int setDev( Device *_d){ dev = _d;}
 			int setIface( int _iface){ iface = _iface;}
 

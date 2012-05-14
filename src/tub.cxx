@@ -53,6 +53,7 @@ namespace TUB{
 		unsigned char buff [512];
 		struct libusb_device_handle *handle = NULL; 
 
+
 		sn="";
 
 		libusb_get_device_descriptor(lusb_dev, &desc);
@@ -84,11 +85,41 @@ namespace TUB{
 			product_name = oss.str();
 		}
 
-
 		cout<<"Adding....: "<<vendor_name<<" -- "<<product_name<<"::"<<sn<<endl;
+
+                //Parsing interfaces.
+                libusb_config_descriptor *config;
+                libusb_get_config_descriptor(lusb_dev, 0, &config);
+                for(int iface=0; (int)config->bNumInterfaces; iface++){
+                    bool did_detach = false;
+
+                    //Valid only on Linux ??
+                    if(libusb_kernel_driver_active( handle , iface ) ){
+                        //Try to detach the driver.
+                        libusb_detach_kernel_driver(handle, iface);
+                        did_detach = true;
+                    }
+
+                    int r = libusb_claim_interface(handle, iface);
+                    //if( r != LIBUSB_SUCCESS && (iface == 0) )
+                    if( r == LIBUSB_SUCCESS )
+                        iface_list.push_back( Interface(handle,config,iface) );
+
+                    libusb_release_interface( handle , iface );
+                    if(did_detach)
+                        libusb_attach_kernel_driver(handle, iface);
+
+                }
+
 
 		libusb_close( handle );
 	}
+
+    Interface::Interface(libusb_device_handle *handle ,
+                          libusb_config_descriptor *config ,
+                          int _iface) : iface_id(_iface) {
+
+                          }
 
 }
 
