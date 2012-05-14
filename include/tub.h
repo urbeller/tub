@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include "tub_enums.h"
 #include "tub_controls.h"
-
+#include "USBId.h"
 using namespace std;
 
 namespace TUB{
@@ -43,6 +43,8 @@ namespace TUB{
 		private:
 			libusb_device *lusb_dev;
 			libusb_device_descriptor desc;
+			string vendor_name;
+			string product_name;
 			string	sn;//Serial number
 		public:
 			Device( libusb_device *_d );
