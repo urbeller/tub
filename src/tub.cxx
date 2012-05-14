@@ -64,7 +64,7 @@ namespace TUB{
 		cout<<"Adding....Vendor/Product/SN: "<<hex<<desc.idVendor <<"/"<<desc.idProduct<<dec<<"/"<<sn<<endl;
 
 		libusb_close( handle );
-	}	
+	}
 
 }
 
