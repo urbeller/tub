@@ -126,7 +126,7 @@ void parse_vcontrol( struct libusb_device_handle *handle  , unsigned char *ptr )
 
         cout<<endl;
         break;
-        
+
         case TUB::VC_EXTENSION_UNIT :
              cout<<" EXTENSION_UNIT | GUID "<<get_guid( &ptr[4] );
 

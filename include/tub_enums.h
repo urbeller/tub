@@ -9,7 +9,7 @@ namespace TUB{
 enum status_type {DEV_ERROR = -2 , INIT_ERROR = -1 , SUCCESS = 1 };
 
 //Class Specific.
-enum cs_type {CS_INTERFACE=0x24 };
+enum cs_type {CS_INTERFACE=0x24 , CS_ENDPOINT=0x25 };
 
 
 //Class Codes.

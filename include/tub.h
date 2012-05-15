@@ -7,7 +7,8 @@
 #include <stdlib.h>
 #include "tub_enums.h"
 #include "tub_controls.h"
-#include "USBId.h"
+#include "usb_id.h"
+
 using namespace std;
 
 namespace TUB{
@@ -15,6 +16,7 @@ namespace TUB{
 	class Device;
 	class Context;
 	class Interface;
+	class AltSetting;
 	class Endpoint;
 	class PropTalk;
 
@@ -55,6 +57,8 @@ namespace TUB{
 	class Interface{
             private:
                 int iface_id;
+                const libusb_interface *iface;
+                vector< AltSetting > altset_list;
 
             public:
                 Interface(libusb_device_handle *handle ,
@@ -62,6 +66,17 @@ namespace TUB{
                           int _iface);
 
 	};
+
+        class AltSetting{
+            private:
+                int altset_id;
+                int altset_class;
+                int altset_subclass;
+                const libusb_interface_descriptor *desc;
+
+            public:
+                AltSetting( int _id);
+        };
 
 	class Endpoint {
 

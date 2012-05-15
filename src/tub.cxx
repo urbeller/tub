@@ -117,9 +117,19 @@ namespace TUB{
 
     Interface::Interface(libusb_device_handle *handle ,
                           libusb_config_descriptor *config ,
-                          int _iface) : iface_id(_iface) {
+                          int _id) : iface_id(_id) {
 
-                          }
+        iface = &config->interface[iface_id];
 
+        for(int id = 0;id<iface->num_altsetting;id++)
+            altset_list.push_back( AltSetting( id ) );
+
+
+    }
+
+
+    AltSetting::AltSetting( const libusb_interface *iface , int _id ) : altset_id(_id){
+        desc = &iface->altsetting[altset_id];
+    }
 }
 

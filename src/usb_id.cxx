@@ -5,7 +5,7 @@
 #include <streambuf>
 #include <sstream>
 
-#include "USBId.h"
+#include "usb_id.h"
 
 using namespace std;
 
