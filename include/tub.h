@@ -78,6 +78,10 @@ namespace TUB{
                 AltSetting( int _id);
         };
 
+        class AltSettingVideoControl : public AltSetting{
+
+        };
+
 	class Endpoint {
 
 	};
