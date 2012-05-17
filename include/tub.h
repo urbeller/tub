@@ -75,10 +75,14 @@ namespace TUB{
                 const libusb_interface_descriptor *desc;
 
             public:
-                AltSetting( int _id);
+                AltSetting( int _id , int _class , int _subclass);
         };
 
         class AltSettingVideoControl : public AltSetting{
+
+        };
+
+        class AltSettingVideoStreaming : public AltSetting{
 
         };
 

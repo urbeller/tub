@@ -121,15 +121,43 @@ namespace TUB{
 
         iface = &config->interface[iface_id];
 
-        for(int id = 0;id<iface->num_altsetting;id++)
-            altset_list.push_back( AltSetting( id ) );
+        //Parse Alt-Settings and push them into altset_list.
+        if( iface->extra_length ){
+            unsigned char *ptr=const_cast<unsigned char*>(iface->extra);
+            unsigned int size = iface->extra_length;
+
+            while( size >= sizeof(uint8) * 2 ){
+                switch( ptr[1] ){
+                    case TUB::CS_INTERFACE :
+                        switch( iface->bInterfaceClass ){
+                            case TUB::CC_VIDEO :
+
+                            break;
+
+                            case TUB::CC_AUDIO :
+
+                            break;
+
+                            default :
+
+                            break;
+                        }
+                    break;
+
+                    default:
+                    break;
+                }
+
+
+                //Move the pointer.
+                ptr += ptr[0];
+                size -= ptr[0];
+            }
+
+        }
 
 
     }
 
-
-    AltSetting::AltSetting( const libusb_interface *iface , int _id ) : altset_id(_id){
-        desc = &iface->altsetting[altset_id];
-    }
 }
 
