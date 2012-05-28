@@ -45,7 +45,7 @@ namespace TUB{
 		private:
 			libusb_device *lusb_dev;
 			libusb_device_descriptor desc;
-                        vector< Interface > iface_list;
+                        vector< Interface > interfaces;
 			string vendor_name;
 			string product_name;
 			string	sn;//Serial number
@@ -59,6 +59,8 @@ namespace TUB{
                 int iface_id;
                 const libusb_interface *iface;
                 vector< AltSetting > altset_list;
+                void parse_altsetting( libusb_device_handle *handle ,
+                                             const libusb_interface_descriptor *desc );
 
             public:
                 Interface(libusb_device_handle *handle ,
@@ -75,7 +77,7 @@ namespace TUB{
                 const libusb_interface_descriptor *desc;
 
             public:
-                AltSetting( int _id , int _class , int _subclass);
+                AltSetting( int _id , int _class , int _subclass) : altset_id(_id) , altset_class(_class)  , altset_subclass(_subclass){}
         };
 
         class AltSettingVideoControl : public AltSetting{
@@ -90,23 +92,23 @@ namespace TUB{
 
 	};
 
-	class PropTalk{
-		private:
-			Device			*dev;//The device
-			int				iface;//The interface
+        class PropTalk{
+            private:
+                Device  *dev;//The device
+                int	iface;//The interface
 
-		public:
-			PropTalk( ){}
-			PropTalk( Device *_d ) : dev(_d) {}
-			PropTalk( Device *_d , int _iface) : dev(_d) , iface(_iface) {}
+            public:
+                PropTalk( ){}
+                PropTalk( Device *_d ) : dev(_d) {}
+                PropTalk( Device *_d , int _iface) : dev(_d) , iface(_iface) {}
 
-			int setDev( Device *_d){ dev = _d;}
-			int setIface( int _iface){ iface = _iface;}
+                int setDev( Device *_d){ dev = _d;}
+                int setIface( int _iface){ iface = _iface;}
 
-			int send( int prop , int val );
-			int get( int prop , int val );
-			int get_range( int prop , int &min , int &max );
-	};
+                int send( int prop , int val );
+                int get( int prop , int val );
+                int get_range( int prop , int &min , int &max );
+        };
 
 };
 

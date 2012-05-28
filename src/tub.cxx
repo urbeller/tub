@@ -90,7 +90,7 @@ namespace TUB{
                 //Parsing interfaces.
                 libusb_config_descriptor *config;
                 libusb_get_config_descriptor(lusb_dev, 0, &config);
-                for(int iface=0; (int)config->bNumInterfaces; iface++){
+                for(int iface=0; iface < uint8_t(config->bNumInterfaces); iface++){
                     bool did_detach = false;
 
                     //Valid only on Linux ??
@@ -103,12 +103,11 @@ namespace TUB{
                     int r = libusb_claim_interface(handle, iface);
                     //if( r != LIBUSB_SUCCESS && (iface == 0) )
                     if( r == LIBUSB_SUCCESS )
-                        iface_list.push_back( Interface(handle,config,iface) );
+                        interfaces.push_back( Interface(handle,config, iface) );
 
                     libusb_release_interface( handle , iface );
                     if(did_detach)
                         libusb_attach_kernel_driver(handle, iface);
-
                 }
 
 
@@ -121,41 +120,67 @@ namespace TUB{
 
         iface = &config->interface[iface_id];
 
-        //Parse Alt-Settings and push them into altset_list.
-        if( iface->extra_length ){
-            unsigned char *ptr=const_cast<unsigned char*>(iface->extra);
-            unsigned int size = iface->extra_length;
+        for(int i=0;i<uint8_t(iface->num_altsetting);i++)
+            parse_altsetting(handle , &iface->altsetting[i]) ;
 
-            while( size >= sizeof(uint8) * 2 ){
+    }
+
+  void Interface::parse_altsetting( libusb_device_handle *handle , const libusb_interface_descriptor *desc ){
+
+       //Parse Alt-Settings and push them into altset_list.
+        if( desc->extra_length ){
+            unsigned char *ptr=const_cast<unsigned char*>(desc->extra);
+            unsigned int size = desc->extra_length;
+
+            while( size >= sizeof(uint8_t) * 2 ){
+
                 switch( ptr[1] ){
                     case TUB::CS_INTERFACE :
-                        switch( iface->bInterfaceClass ){
+                        switch( desc->bInterfaceClass ){
                             case TUB::CC_VIDEO :
+                                switch( desc->bInterfaceSubClass ){
+                                    case SC_VIDEOCONTROL:
+                                        break;
 
-                            break;
+                                    case SC_VIDEOSTREAMING:
+                                        break;
+
+                                    default :
+                                        goto dump_unknown;
+                                }
+                                break;
 
                             case TUB::CC_AUDIO :
+                                switch( desc->bInterfaceSubClass ){
+                                    case SC_AUDIOCONTROL:
+                                        break;
 
-                            break;
+                                    case SC_AUDIOSTREAMING:
+                                        break;
+
+                                    default :
+                                        goto dump_unknown;
+
+                                }
+                                break;
 
                             default :
-
-                            break;
+                                goto dump_unknown;
                         }
-                    break;
+                        break;
 
                     default:
-                    break;
+                    dump_unknown:
+                        altset_list.push_back( AltSetting(desc->bInterfaceNumber , desc->bInterfaceClass , desc->bInterfaceSubClass) );
                 }
 
 
                 //Move the pointer.
-                ptr += ptr[0];
                 size -= ptr[0];
+                ptr += ptr[0];
             }
 
         }
-
 
     }
 
