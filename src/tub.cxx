@@ -8,6 +8,34 @@
 
 using namespace std;
 
+    void parse_video_control( libusb_device_handle *handle , unsigned char *ptr ){
+        switch( ptr[2] ){
+            case TUB::VC_INPUT_TERMINAL :
+                cout<<"\tINPUT_TERMINAL\n";
+            break;
+
+            case TUB::VC_PROCESSING_UNIT :
+                cout<<"\tPROCESSING_UNIT\n";
+            break;
+
+            default:
+                cout<<"\t UNKW VIDEO_CTRL: "<<hex<<int(ptr[2])<<dec<<endl;
+
+        }
+    }
+
+    void parse_video_streaming( unsigned char *ptr ){
+        cout<<"Video Streaming....\n";
+    }
+
+    void parse_audio_control( libusb_device_handle *handle ,  unsigned char *ptr ){
+        cout<<"Audio Control....\n";
+    }
+
+    void parse_audio_streaming( unsigned char *ptr ){
+        cout<<"Audio Streaming....\n";
+    }
+
 namespace TUB{
 
 	int Context::refresh( ){
@@ -48,7 +76,7 @@ namespace TUB{
 
 
 
-	Device::Device( libusb_device *_d ) : lusb_dev(_d) , vendor_name("") , product_name(""){
+	Device::Device( libusb_device *_d ) : device(_d) , vendor_name("") , product_name(""){
 		int err;
 		unsigned char buff [512];
 		struct libusb_device_handle *handle = NULL; 
@@ -56,8 +84,8 @@ namespace TUB{
 
 		sn="";
 
-		libusb_get_device_descriptor(lusb_dev, &desc);
-		libusb_open( lusb_dev , &handle);
+		libusb_get_device_descriptor(device, &desc);
+		libusb_open( device , &handle);
 		err = libusb_get_string_descriptor_ascii( handle , int(desc.iSerialNumber) , buff , sizeof(buff) );
 
 		if( err > 0 )
@@ -89,7 +117,7 @@ namespace TUB{
 
                 //Parsing interfaces.
                 libusb_config_descriptor *config;
-                libusb_get_config_descriptor(lusb_dev, 0, &config);
+                libusb_get_config_descriptor(device, 0, &config);
                 for(int iface=0; iface < uint8_t(config->bNumInterfaces); iface++){
                     bool did_detach = false;
 
@@ -101,7 +129,6 @@ namespace TUB{
                     }
 
                     int r = libusb_claim_interface(handle, iface);
-                    //if( r != LIBUSB_SUCCESS && (iface == 0) )
                     if( r == LIBUSB_SUCCESS )
                         interfaces.push_back( Interface(handle,config, iface) );
 
@@ -114,75 +141,82 @@ namespace TUB{
 		libusb_close( handle );
 	}
 
-    Interface::Interface(libusb_device_handle *handle ,
-                          libusb_config_descriptor *config ,
-                          int _id) : iface_id(_id) {
 
-        iface = &config->interface[iface_id];
 
-        for(int i=0;i<uint8_t(iface->num_altsetting);i++)
-            parse_altsetting(handle , &iface->altsetting[i]) ;
+        Interface::Interface(libusb_device_handle *handle ,
+                libusb_config_descriptor *config ,
+                int _id) : iface_id(_id) {
 
-    }
+            iface = &config->interface[iface_id];
 
-  void Interface::parse_altsetting( libusb_device_handle *handle , const libusb_interface_descriptor *desc ){
+            for(int i=0;i<uint8_t(iface->num_altsetting);i++)
+                parse_altsetting(handle , &iface->altsetting[i]) ;
 
-       //Parse Alt-Settings and push them into altset_list.
-        if( desc->extra_length ){
-            unsigned char *ptr=const_cast<unsigned char*>(desc->extra);
-            unsigned int size = desc->extra_length;
+        }
 
-            while( size >= sizeof(uint8_t) * 2 ){
+        void Interface::parse_altsetting( libusb_device_handle *handle , const libusb_interface_descriptor *desc ){
 
-                switch( ptr[1] ){
-                    case TUB::CS_INTERFACE :
-                        switch( desc->bInterfaceClass ){
-                            case TUB::CC_VIDEO :
-                                switch( desc->bInterfaceSubClass ){
-                                    case SC_VIDEOCONTROL:
-                                        break;
+            //Parse Alt-Settings and push them into altset_list.
+            if( desc->extra_length ){
+                unsigned char *ptr=const_cast<unsigned char*>(desc->extra);
+                unsigned int size = desc->extra_length;
 
-                                    case SC_VIDEOSTREAMING:
-                                        break;
+                while( size >= sizeof(uint8_t) * 2 ){
 
-                                    default :
-                                        goto dump_unknown;
-                                }
-                                break;
+                    switch( ptr[1] ){
+                        case TUB::CS_INTERFACE :
+                            switch( desc->bInterfaceClass ){
+                                case TUB::CC_VIDEO :
+                                    switch( desc->bInterfaceSubClass ){
+                                        case SC_VIDEOCONTROL:
+                                            parse_video_control(handle , ptr);
+                                            break;
 
-                            case TUB::CC_AUDIO :
-                                switch( desc->bInterfaceSubClass ){
-                                    case SC_AUDIOCONTROL:
-                                        break;
+                                        case SC_VIDEOSTREAMING:
+                                            parse_video_streaming(ptr);
+                                            break;
 
-                                    case SC_AUDIOSTREAMING:
-                                        break;
+                                        default :
+                                            goto dump_unknown;
+                                    }
+                                    break;
 
-                                    default :
-                                        goto dump_unknown;
+                                case TUB::CC_AUDIO :
+                                    switch( desc->bInterfaceSubClass ){
+                                        case SC_AUDIOCONTROL:
+                                            parse_audio_control(handle , ptr);
+                                            break;
 
-                                }
-                                break;
+                                        case SC_AUDIOSTREAMING:
+                                            parse_audio_streaming(ptr);
+                                            break;
 
-                            default :
-                                goto dump_unknown;
-                        }
-                        break;
+                                        default :
+                                            goto dump_unknown;
 
-                    default:
-                    dump_unknown:
-                        altset_list.push_back( AltSetting(desc->bInterfaceNumber , desc->bInterfaceClass , desc->bInterfaceSubClass) );
+                                    }
+                                    break;
+
+                                default :
+                                    goto dump_unknown;
+                            }
+                            break;
+
+                        default:
+dump_unknown:
+                            altset_list.push_back( AltSetting(desc->bInterfaceNumber , desc->bInterfaceClass , desc->bInterfaceSubClass) );
+                    }
+
+
+                    //Move the pointer.
+                    size -= ptr[0];
+                    ptr  += ptr[0];
                 }
 
-
-                //Move the pointer.
-                size -= ptr[0];
-                ptr += ptr[0];
             }
 
         }
 
-    }
 
 }
 

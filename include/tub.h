@@ -43,7 +43,7 @@ namespace TUB{
 
 	class Device{
 		private:
-			libusb_device *lusb_dev;
+			libusb_device *device;
 			libusb_device_descriptor desc;
                         vector< Interface > interfaces;
 			string vendor_name;
