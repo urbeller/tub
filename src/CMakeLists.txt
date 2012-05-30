@@ -2,7 +2,7 @@
 ADD_LIBRARY( tub SHARED tub.cxx usb_id.cxx)
 TARGET_LINK_LIBRARIES(tub ${LibUSB_LIBRARIES})
 
-SET( SOURCES test )
+#SET( SOURCES test )
 
 FOREACH( src ${SOURCES} )
 	ADD_EXECUTABLE(${src} ${src}.cxx)

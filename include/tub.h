@@ -70,21 +70,39 @@ namespace TUB{
 	};
 
         class AltSetting{
-            private:
-                int altset_id;
+            protected:
                 int altset_class;
                 int altset_subclass;
                 const libusb_interface_descriptor *desc;
 
+
             public:
-                AltSetting( int _id , int _class , int _subclass) : altset_id(_id) , altset_class(_class)  , altset_subclass(_subclass){}
+                AltSetting( int _class , int _subclass, const libusb_interface_descriptor *_desc) :
+                     altset_class(_class)  , altset_subclass(_subclass) , desc(_desc){ }
         };
 
         class AltSettingVideoControl : public AltSetting{
+            private:
+                vector< control_t > controls;
+                void parse_video_control( libusb_device_handle *handle , unsigned char *ptr);
+
+            public:
+                AltSettingVideoControl( const libusb_interface_descriptor *_desc , libusb_device_handle *handle , unsigned char *ptr )
+                    : AltSetting(CC_VIDEO,SC_VIDEOCONTROL, _desc) {
+                        parse_video_control(handle,ptr);
+                    }
 
         };
 
         class AltSettingVideoStreaming : public AltSetting{
+            private:
+                void parse_video_streaming( unsigned char *ptr );
+
+            public:
+                AltSettingVideoStreaming( const libusb_interface_descriptor *_desc , unsigned char* ptr )
+                    : AltSetting(CC_VIDEO,SC_VIDEOCONTROL,_desc) {
+                        parse_video_streaming(ptr);
+                        }
 
         };
 

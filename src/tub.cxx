@@ -8,34 +8,6 @@
 
 using namespace std;
 
-    void parse_video_control( libusb_device_handle *handle , unsigned char *ptr ){
-        switch( ptr[2] ){
-            case TUB::VC_INPUT_TERMINAL :
-                cout<<"\tINPUT_TERMINAL\n";
-            break;
-
-            case TUB::VC_PROCESSING_UNIT :
-                cout<<"\tPROCESSING_UNIT\n";
-            break;
-
-            default:
-                cout<<"\t UNKW VIDEO_CTRL: "<<hex<<int(ptr[2])<<dec<<endl;
-
-        }
-    }
-
-    void parse_video_streaming( unsigned char *ptr ){
-        cout<<"Video Streaming....\n";
-    }
-
-    void parse_audio_control( libusb_device_handle *handle ,  unsigned char *ptr ){
-        cout<<"Audio Control....\n";
-    }
-
-    void parse_audio_streaming( unsigned char *ptr ){
-        cout<<"Audio Streaming....\n";
-    }
-
 namespace TUB{
 
 	int Context::refresh( ){
@@ -164,36 +136,20 @@ namespace TUB{
                 while( size >= sizeof(uint8_t) * 2 ){
 
                     switch( ptr[1] ){
-                        case TUB::CS_INTERFACE :
+                        case CS_INTERFACE :
                             switch( desc->bInterfaceClass ){
-                                case TUB::CC_VIDEO :
+                                case CC_VIDEO :
                                     switch( desc->bInterfaceSubClass ){
                                         case SC_VIDEOCONTROL:
-                                            parse_video_control(handle , ptr);
+                                            altset_list.push_back(AltSettingVideoControl(desc, handle,ptr));
                                             break;
 
                                         case SC_VIDEOSTREAMING:
-                                            parse_video_streaming(ptr);
+                                            altset_list.push_back(AltSettingVideoStreaming(desc,ptr));
                                             break;
 
                                         default :
                                             goto dump_unknown;
-                                    }
-                                    break;
-
-                                case TUB::CC_AUDIO :
-                                    switch( desc->bInterfaceSubClass ){
-                                        case SC_AUDIOCONTROL:
-                                            parse_audio_control(handle , ptr);
-                                            break;
-
-                                        case SC_AUDIOSTREAMING:
-                                            parse_audio_streaming(ptr);
-                                            break;
-
-                                        default :
-                                            goto dump_unknown;
-
                                     }
                                     break;
 
@@ -204,7 +160,7 @@ namespace TUB{
 
                         default:
 dump_unknown:
-                            altset_list.push_back( AltSetting(desc->bInterfaceNumber , desc->bInterfaceClass , desc->bInterfaceSubClass) );
+                            altset_list.push_back( AltSetting(desc->bInterfaceClass , desc->bInterfaceSubClass,desc) );
                     }
 
 
@@ -217,6 +173,91 @@ dump_unknown:
 
         }
 
+        void AltSettingVideoControl::parse_video_control( libusb_device_handle *handle , unsigned char *ptr ){
+            unsigned int term_type;
+            unsigned int nbytes_controls;
+            int ctrl;
+
+            switch( ptr[2] ){
+                case VC_INPUT_TERMINAL :
+                    term_type = ptr[4] | ( ptr[5]<<8);
+                    if( term_type == ITT_CAMERA ){
+                        nbytes_controls=ptr[14];
+                        ctrl=0;
+                        for(int b=0;b<nbytes_controls;b++)
+                            for(int f=0;f<8;f++){
+                                if( (1<<f) & ptr[15+b])
+                                    controls.push_back( std_controls[0][ctrl] );
+
+                                ctrl++;
+                            }
+                    }
+
+                    break;
+
+                case VC_PROCESSING_UNIT :
+                    nbytes_controls = ptr[7];
+                    ctrl=0;
+                    for(int b=0;b<nbytes_controls;b++)
+                        for(int f=0;f<8;f++){
+                            if( (1<<f) & ptr[8+b])
+                                controls.push_back( std_controls[1][ctrl] );
+
+                            ctrl++;
+                        }
+
+                    break;
+
+                default:
+                    //cout<<"\t UNKW VIDEO_CTRL: "<<hex<<int(ptr[2])<<dec<<endl;
+                    break;
+
+            }
+        }
+
+    void AltSettingVideoStreaming::parse_video_streaming( unsigned char *ptr ){
+        int width , height;
+
+        switch (ptr[2]) {
+            case  VS_FORMAT_UNCOMPRESSED:
+                //cout<<"# of UNCOMPRESSED desc: "<<int(ptr[4])<<endl;
+            break;
+
+            case  VS_FORMAT_MJPEG:
+                //cout<<"# of MJPEG desc: "<<int(ptr[4])<<endl;
+            break;
+
+            case VS_FRAME_UNCOMPRESSED:
+            case VS_FRAME_MJPEG:
+                if( ptr[2]==VS_FRAME_MJPEG )
+                    cout<<"\t MJPEG...";
+                else
+                    cout<<"\t UNCOMPRESSED...";
+
+                width =  ptr[5] | (ptr[6] << 8);
+                height=  ptr[7] | (ptr[8] << 8);
+
+                cout<<width<<"x"<<height<<"...";
+
+                if( ptr[25] != 0 ){
+                    //Not continuous
+                    int nb_fps=int(ptr[25]);
+                    for(int i=0;i<nb_fps;i++){
+                        int interval_ns = (ptr[26+4*i] | (ptr[27+4*i] << 8) | (ptr[28+4*i] << 16) | (ptr[29+4*i] << 24))*100;
+                        float fps = float(1E9)/float(interval_ns);
+                        cout<<fps<<",";
+                    }
+
+                }
+                cout<<endl;
+
+            break;
+
+            default:
+                //cout<<"\t UNKW FRAME/FORMAT HEADER: "<<hex<<int(ptr[2])<<dec<<endl;
+            break;
+        }
+    }
 
 }
 
