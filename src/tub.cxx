@@ -237,7 +237,7 @@ dump_unknown:
                 width =  ptr[5] | (ptr[6] << 8);
                 height=  ptr[7] | (ptr[8] << 8);
 
-                cout<<width<<"x"<<height<<"...";
+                cout<<width<<"x"<<height<<","<<float(width)/height<<","<<float(width*height)/1E6<<"Mpixels...";
 
                 if( ptr[25] != 0 ){
                     //Not continuous
@@ -245,7 +245,7 @@ dump_unknown:
                     for(int i=0;i<nb_fps;i++){
                         int interval_ns = (ptr[26+4*i] | (ptr[27+4*i] << 8) | (ptr[28+4*i] << 16) | (ptr[29+4*i] << 24))*100;
                         float fps = float(1E9)/float(interval_ns);
-                        cout<<fps<<",";
+                        cout<<fps<<"FPS/";
                     }
 
                 }
