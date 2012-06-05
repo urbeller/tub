@@ -16,6 +16,11 @@ int main( int argc , char *argv[] ){
             exit(1);
         }
 
+        for(int i=0;i<ctx.nb_devices();i++){
+            Device &dev = ctx.list[i];
+            cout<<dev.get_vn()<<":::"<<dev.get_pn()<<endl;
+        }
+
 
 	return 0;
 }

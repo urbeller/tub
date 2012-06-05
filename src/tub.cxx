@@ -85,8 +85,6 @@ namespace TUB{
 			product_name = oss.str();
 		}
 
-		cout<<"Adding....: "<<vendor_name<<" -- "<<product_name<<"::"<<sn<<endl;
-
                 //Parsing interfaces.
                 libusb_config_descriptor *config;
                 libusb_get_config_descriptor(device, 0, &config);
@@ -216,7 +214,6 @@ dump_unknown:
         }
 
     void AltSettingVideoStreaming::parse_video_streaming( unsigned char *ptr ){
-        int width , height;
 
         switch (ptr[2]) {
             case  VS_FORMAT_UNCOMPRESSED:
@@ -230,26 +227,24 @@ dump_unknown:
             case VS_FRAME_UNCOMPRESSED:
             case VS_FRAME_MJPEG:
                 if( ptr[2]==VS_FRAME_MJPEG )
-                    cout<<"\t MJPEG...";
+                    frame_type = VS_FRAME_MJPEG;
                 else
-                    cout<<"\t UNCOMPRESSED...";
+                    frame_type = VS_FRAME_UNCOMPRESSED;
 
                 width =  ptr[5] | (ptr[6] << 8);
                 height=  ptr[7] | (ptr[8] << 8);
 
-                cout<<width<<"x"<<height<<","<<float(width)/height<<","<<float(width*height)/1E6<<"Mpixels...";
 
                 if( ptr[25] != 0 ){
                     //Not continuous
                     int nb_fps=int(ptr[25]);
                     for(int i=0;i<nb_fps;i++){
-                        int interval_ns = (ptr[26+4*i] | (ptr[27+4*i] << 8) | (ptr[28+4*i] << 16) | (ptr[29+4*i] << 24))*100;
-                        float fps = float(1E9)/float(interval_ns);
-                        cout<<fps<<"FPS/";
+                        int interval_ns = (ptr[26+4*i] | (ptr[27+4*i] << 8) | 
+                                          (ptr[28+4*i] << 16) | (ptr[29+4*i] << 24))*100;
+                        fps.push_back( double(1E9)/double(interval_ns) );
                     }
 
                 }
-                cout<<endl;
 
             break;
 

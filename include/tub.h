@@ -29,7 +29,7 @@ namespace TUB{
 		public:
 			vector<Device> list;//Not the best structure if devices must be removed!
 
-
+                        int nb_devices(){ return list.size();}
 			int refresh( );
 
 			//ctor
@@ -51,6 +51,8 @@ namespace TUB{
 			string	sn;//Serial number
 		public:
 			Device( libusb_device *_d );
+                        string  get_vn(){return vendor_name;}
+                        string  get_pn(){return product_name;}
 
 	};
 
@@ -87,8 +89,10 @@ namespace TUB{
                 void parse_video_control( libusb_device_handle *handle , unsigned char *ptr);
 
             public:
-                AltSettingVideoControl( const libusb_interface_descriptor *_desc , libusb_device_handle *handle , unsigned char *ptr )
-                    : AltSetting(CC_VIDEO,SC_VIDEOCONTROL, _desc) {
+                AltSettingVideoControl( const libusb_interface_descriptor *_desc ,
+                                              libusb_device_handle *handle ,
+                                              unsigned char *ptr ) : AltSetting(CC_VIDEO,SC_VIDEOCONTROL, _desc)
+                    {
                         parse_video_control(handle,ptr);
                     }
 
@@ -96,13 +100,21 @@ namespace TUB{
 
         class AltSettingVideoStreaming : public AltSetting{
             private:
-                void parse_video_streaming( unsigned char *ptr );
+                vector< double >    fps;
+                int                 frame_type;
+                int                 width;
+                int                 height;
+                void                parse_video_streaming( unsigned char *ptr );
 
             public:
-                AltSettingVideoStreaming( const libusb_interface_descriptor *_desc , unsigned char* ptr )
-                    : AltSetting(CC_VIDEO,SC_VIDEOCONTROL,_desc) {
-                        parse_video_streaming(ptr);
-                        }
+                AltSettingVideoStreaming( const libusb_interface_descriptor *_desc ,
+                                          unsigned char* ptr ) : AltSetting(CC_VIDEO,SC_VIDEOCONTROL,_desc)
+                {
+                    parse_video_streaming(ptr);
+                }
+
+                double aspect_ratio(){ return double(width)/double(height);}
+                double mpixel(){ return double(width*height)/1E6;}
 
         };
 
