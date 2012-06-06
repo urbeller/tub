@@ -31,7 +31,6 @@ namespace TUB{
 
                         int nb_devices(){ return list.size();}
 			int refresh( );
-
 			//ctor
 			Context( ) : ctx(NULL) {}
 			~Context(){
@@ -46,6 +45,8 @@ namespace TUB{
 			libusb_device *device;
 			libusb_device_descriptor desc;
                         vector< Interface > interfaces;
+                        int     vc_id;//video_control interface id.
+                        int     vs_id;//video_streaming interface id.
 			string vendor_name;
 			string product_name;
 			string	sn;//Serial number
@@ -59,6 +60,7 @@ namespace TUB{
 	class Interface{
             private:
                 int iface_id;
+                const libusb_device_handle *dev_handle;
                 const libusb_interface *iface;
                 vector< AltSetting > altset_list;
                 void parse_altsetting( libusb_device_handle *handle ,
@@ -68,7 +70,9 @@ namespace TUB{
                 Interface(libusb_device_handle *handle ,
                           libusb_config_descriptor *config ,
                           int _iface);
+                int req( req_t &r);
 
+            friend class Device;
 	};
 
         class AltSetting{
@@ -81,6 +85,8 @@ namespace TUB{
             public:
                 AltSetting( int _class , int _subclass, const libusb_interface_descriptor *_desc) :
                      altset_class(_class)  , altset_subclass(_subclass) , desc(_desc){ }
+
+            friend class Device;
         };
 
         class AltSettingVideoControl : public AltSetting{
@@ -108,7 +114,7 @@ namespace TUB{
 
             public:
                 AltSettingVideoStreaming( const libusb_interface_descriptor *_desc ,
-                                          unsigned char* ptr ) : AltSetting(CC_VIDEO,SC_VIDEOCONTROL,_desc)
+                                          unsigned char* ptr ) : AltSetting(CC_VIDEO,SC_VIDEOSTREAMING,_desc)
                 {
                     parse_video_streaming(ptr);
                 }

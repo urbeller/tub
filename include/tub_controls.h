@@ -5,6 +5,15 @@
 
 namespace TUB{
 
+    typedef struct{
+        uint8_t type;
+        uint8_t req;
+        uint16_t value;
+        uint16_t ndx;
+        uint16_t len;
+        unsigned char *data;
+    } req_t;
+
     typedef struct {
         unsigned int    bit;
         unsigned int    unit;

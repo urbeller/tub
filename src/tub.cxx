@@ -91,12 +91,20 @@ namespace TUB{
                 for(int iface=0; iface < uint8_t(config->bNumInterfaces); iface++){
                     bool did_detach = false;
 
+                   #ifndef _WIN32
                     //Valid only on Linux ??
                     if(libusb_kernel_driver_active( handle , iface ) ){
-                        //Try to detach the driver.
-                        libusb_detach_kernel_driver(handle, iface);
-                        did_detach = true;
+                        #ifdef  __APPLE__
+                            cout<<"Warning: Can't detach (yet) dirvers on MacOs.\n";
+                        #else
+                            //Try to detach the driver.
+                            libusb_detach_kernel_driver(handle, iface);
+                            did_detach = true;
+                        #endif
                     }
+                    #else
+                        cout<<"Warning: Will try to claim interface.\n";
+                    #endif
 
                     int r = libusb_claim_interface(handle, iface);
                     if( r == LIBUSB_SUCCESS )
@@ -109,18 +117,44 @@ namespace TUB{
 
 
 		libusb_close( handle );
+
+                //Now that we are done parsing the device
+                //...identify control and streaming interfaces.
+                vc_id = vs_id = -1;
+                for(int i=0;i<interfaces.size();i++){
+                    for(int alt=0;alt<interfaces[i].altset_list.size();alt++){
+                        if( interfaces[i].altset_list[alt].altset_class == CC_VIDEO
+                                                &&
+                            interfaces[i].altset_list[alt].altset_subclass == SC_VIDEOCONTROL)
+                                vc_id =interfaces[i].altset_list[alt].desc->bInterfaceNumber;
+
+                        if( interfaces[i].altset_list[alt].altset_class == CC_VIDEO
+                                &&
+                            interfaces[i].altset_list[alt].altset_subclass == SC_VIDEOSTREAMING)
+                                vs_id =interfaces[i].altset_list[alt].desc->bInterfaceNumber;
+
+                    }
+
+                }
+
+
 	}
 
 
 
         Interface::Interface(libusb_device_handle *handle ,
                 libusb_config_descriptor *config ,
-                int _id) : iface_id(_id) {
+                int _id) : dev_handle(handle) , iface_id(_id) {
 
             iface = &config->interface[iface_id];
 
             for(int i=0;i<uint8_t(iface->num_altsetting);i++)
                 parse_altsetting(handle , &iface->altsetting[i]) ;
+
+        }
+
+
+        int Interface::req( req_t &r){
 
         }
 

@@ -393,17 +393,17 @@ int send_uvc_req(struct uviface *uvi, struct ctrlreq *cr)
 	#endif
 
 	r = libusb_claim_interface(uvi->udh, uvi->iface);
-	if(r == 0)
-	{
-		r = libusb_control_transfer(uvi->udh,
-									cr->bmRequestType,
-									cr->bRequest,
-									cr->wValue,
-									cr->wIndex,
-									cr->data,
-									cr->wLength,
-									0); /* timeout */
-		if(r < 0)
+        if(r == 0)
+        {
+            r = libusb_control_transfer(uvi->udh,
+                    cr->bmRequestType,
+                    cr->bRequest,
+                    cr->wValue,
+                    cr->wIndex,
+                    cr->data,
+                    cr->wLength,
+                    0); /* timeout */
+            if(r < 0)
 		{
 			fprintf(stderr, "request failed: ");
 			switch(r)
