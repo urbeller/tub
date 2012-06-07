@@ -60,7 +60,7 @@ namespace TUB{
 	class Interface{
             private:
                 int iface_id;
-                const libusb_device_handle *dev_handle;
+                libusb_device_handle *dev_handle;
                 const libusb_interface *iface;
                 vector< AltSetting > altset_list;
                 void parse_altsetting( libusb_device_handle *handle ,
@@ -70,7 +70,9 @@ namespace TUB{
                 Interface(libusb_device_handle *handle ,
                           libusb_config_descriptor *config ,
                           int _iface);
-                int req( req_t &r);
+
+                /*Perform a usb request through the interface*/
+                int interface_io( req_t &r);
 
             friend class Device;
 	};

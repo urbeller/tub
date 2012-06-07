@@ -10,8 +10,8 @@ namespace TUB{
         uint8_t req;
         uint16_t value;
         uint16_t ndx;
-        uint16_t len;
         unsigned char *data;
+        uint16_t len;
     } req_t;
 
     typedef struct {
@@ -23,6 +23,8 @@ namespace TUB{
         const char*     name;
     } control_t;
 
+
+    enum control_op {SET_CUR=0x01,GET_CUR=0x81,GET_MIN=0x82,GET_MAX=0x83};
 
     static control_t std_controls[][24]={
         {

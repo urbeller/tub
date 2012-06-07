@@ -11,18 +11,18 @@ using namespace std;
 namespace TUB{
 
 	int Context::refresh( ){
-		libusb_device **devs; //pointer to pointer of device, used to retrieve a list of devices
+		libusb_device **devs; //list of devices
 		libusb_device_descriptor desc;
-		struct libusb_device_handle *handle = NULL; 
-		ssize_t cnt; //holding number of devices in list
+		struct libusb_device_handle *handle = NULL;
+		ssize_t n_devs; 
 
 		if( libusb_init(&ctx) < 0 )
 			return INIT_ERROR;
 
 		list.clear();
-		cnt = libusb_get_device_list(ctx, &devs); //get the list of devices
+		n_devs = libusb_get_device_list(ctx, &devs); //get the list of devices
 
-		for(int i=0;i<cnt;i++){
+		for(int i=0;i<n_devs;i++){
 			int r = libusb_get_device_descriptor(devs[i], &desc);
 			if (r < 0) {
 				cout<<"Warning: Failed to get device descriptor."<<endl;
@@ -92,10 +92,10 @@ namespace TUB{
                     bool did_detach = false;
 
                    #ifndef _WIN32
-                    //Valid only on Linux ??
                     if(libusb_kernel_driver_active( handle , iface ) ){
                         #ifdef  __APPLE__
-                            cout<<"Warning: Can't detach (yet) dirvers on MacOs.\n";
+                            cout<<"Warning: Can't detach (yet) drivers on MacOs.\n";
+                            continue;
                         #else
                             //Try to detach the driver.
                             libusb_detach_kernel_driver(handle, iface);
@@ -103,7 +103,7 @@ namespace TUB{
                         #endif
                     }
                     #else
-                        cout<<"Warning: Will try to claim interface.\n";
+                        cout<<"Warning (WIN32/64): Will try to claim interface.\n";
                     #endif
 
                     int r = libusb_claim_interface(handle, iface);
@@ -140,22 +140,87 @@ namespace TUB{
 
 	}
 
-
-
         Interface::Interface(libusb_device_handle *handle ,
                 libusb_config_descriptor *config ,
                 int _id) : dev_handle(handle) , iface_id(_id) {
 
             iface = &config->interface[iface_id];
 
-            for(int i=0;i<uint8_t(iface->num_altsetting);i++)
+            for(int i=0; i < uint8_t(iface->num_altsetting); i++)
                 parse_altsetting(handle , &iface->altsetting[i]) ;
 
         }
 
 
-        int Interface::req( req_t &r){
+        int Interface::interface_io( req_t &rq){
+            bool did_detach = false;
 
+                    #ifndef _WIN32
+                    if(libusb_kernel_driver_active( dev_handle , iface_id ) ){
+                        #ifdef  __APPLE__
+                            cout<<"Warning: Can't detach (yet) drivers on MacOs.\n";
+                            return -1;
+                        #else
+                            //Try to detach the driver.
+                            libusb_detach_kernel_driver(dev_handle, iface_id);
+                            did_detach = true;
+                        #endif
+                    }
+                    #else
+                        cout<<"Warning (WIN32/64): Will try to claim interface.\n";
+                    #endif
+
+
+                        int req_ret = libusb_claim_interface( dev_handle , iface_id );
+                        if( req_ret == 0 ){
+                            if( (req_ret = libusb_control_transfer(
+                                    dev_handle,
+                                    rq.type,
+                                    rq.req,
+                                    rq.value,
+                                    rq.ndx,
+                                    rq.data,
+                                    rq.len,
+                                    0) )/*Timeout*/ < 0 )
+                                cout<<"USB request failed: ";
+                        }else
+                            cout<<"Interface claim failed : ";
+
+                    if( req_ret < 0 ){
+                        switch (req_ret) {
+                            case LIBUSB_ERROR_NO_DEVICE:
+                                cout<<" Device is not attached.";
+                                break;
+
+                            case LIBUSB_ERROR_TIMEOUT:
+                                cout<<" Device timed out.";
+                                break;
+                            case LIBUSB_ERROR_PIPE:
+                                cout<<" Pipe stall/error.";
+                                break;
+                            case LIBUSB_ERROR_OVERFLOW:
+                                cout<<" Data overflow.";
+                                break;
+
+                            default:
+                                cout<<" Unknown error.";
+
+                        }
+
+                        cout<<endl;
+                    }
+
+            int Interface::req(){
+
+            }
+
+
+            //Put the driver back.
+            if( did_detach )
+                libusb_attach_kernel_driver(dev_handle, iface_id);
+
+
+            return req_ret;
         }
 
         void Interface::parse_altsetting( libusb_device_handle *handle , const libusb_interface_descriptor *desc ){
