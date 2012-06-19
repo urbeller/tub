@@ -181,7 +181,8 @@ namespace TUB{
                                     rq.ndx,
                                     rq.data,
                                     rq.len,
-                                    0) )/*Timeout*/ < 0 )
+                                    0) )/*Timeout*/
+                                    < 0 )
                                 cout<<"USB request failed: ";
                         }else
                             cout<<"Interface claim failed : ";
@@ -209,11 +210,6 @@ namespace TUB{
 
                         cout<<endl;
                     }
-
-            int Interface::req(){
-
-            }
-
 
             //Put the driver back.
             if( did_detach )

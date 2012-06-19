@@ -377,7 +377,7 @@ int send_uvc_req(struct uviface *uvi, struct ctrlreq *cr)
 	#ifndef _WIN32
 	if(libusb_kernel_driver_active(uvi->udh, uvi->iface))
 	{
-		#ifdef __MACH__ || __APPLE__
+		#ifdef  __APPLE__
 		fprintf(stderr, "Device or interface busy, cannot detach!\n");
 		close_uvi(uvi);
 		return -1;
